@@ -2,6 +2,9 @@ import { useState, useRef } from 'react'
 import axios from 'axios'
 import './App.css'
 
+// API Base URL 설정
+axios.defaults.baseURL = 'https://doroks.tplinkdns.com/couponsystem/back'
+
 interface User {
   id: string
   name: string
@@ -28,7 +31,6 @@ function App() {
   const [users, setUsers] = useState<User[]>([])
   const [userCount, setUserCount] = useState<number>(1000)
   const [couponLimit, setCouponLimit] = useState<number>(500)
-  const [apiUrl, setApiUrl] = useState<string>('https://doroks.tplinkdns.com/couponsystem/back')
   const [couponId, setCouponId] = useState<string>('WELCOME')
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isGeneratingUsers, setIsGeneratingUsers] = useState<boolean>(false)
@@ -43,19 +45,6 @@ function App() {
         user.id === userId ? { ...user, status } : user
       )
     )
-  }
-
-  // API 연결 테스트 함수 추가
-  const testApiConnection = async () => {
-    try {
-      console.log('🔍 API 연결 테스트 시작... ', apiUrl);
-      const response = await axios.get(apiUrl);
-      console.log('✅ API 서버 연결 성공:', response);
-      alert('API 서버 연결 성공!');
-    } catch (error: any) {
-      console.error('❌ API 서버 연결 실패:', error);
-      alert(`API 서버 연결 실패: ${error.message}`);
-    }
   }
 
   // 랜덤 유저 생성
@@ -76,7 +65,7 @@ function App() {
     const newUsers: User[] = []
 
     const response = await axios.post(
-      apiUrl + `/users/random?count=${count}`,
+      `/users/random?count=${count}`,
     )
 
     const data = response.data.data;
@@ -115,11 +104,11 @@ function App() {
     }
 
     try {
-      console.log(`📡 쿠폰 API 요청: ${apiUrl}`);
+      console.log(`📡 쿠폰 API 요청: /user-coupons`);
       console.log(`📤 요청 데이터:`, { userId: user.id });
       
       const response = await axios.post(
-        apiUrl + `/user-coupons`,
+        `/user-coupons`,
         { userId: user.id, couponId: couponId },
         { 
           timeout: 10000 // 10초 타임아웃
@@ -307,7 +296,7 @@ function App() {
       console.log('📤 쿠폰 생성 데이터:', couponData);
       
       const response = await axios.post(
-        apiUrl + '/coupons',
+        `/coupons`,
         couponData,
         { timeout: 10000 }
       )
@@ -335,35 +324,6 @@ function App() {
           <h2>⚙️ 테스트 설정</h2>
 
           <div className="input-group">
-            <label>API URL:</label>
-            <input
-              type="text"
-              value={apiUrl}
-              onChange={(e) => setApiUrl(e.target.value)}
-              placeholder="/api"
-            />
-            <small>프록시를 통해 localhost:3000과 연결됩니다</small>
-          </div>
-
-          <div className="input-group">
-            <button 
-              onClick={testApiConnection} 
-              disabled={isGeneratingUsers || isLoading}
-              style={{
-                background: 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)',
-                color: 'white',
-                padding: '10px 20px',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '14px'
-              }}
-            >
-              🔍 API 연결 테스트
-            </button>
-          </div>
-
-          <div className="input-group">
             <label>생성할 유저 수:</label>
             <input
               type="number"
@@ -385,7 +345,12 @@ function App() {
               max="10000"
             />
           </div>
+        </div>
 
+        {/* 쿠폰 생성 섹션 */}
+        <div className="coupon-section">
+          <h2>🎫 쿠폰 생성</h2>
+          
           <div className="input-group">
             <label>쿠폰 ID:</label>
             <input
@@ -396,6 +361,38 @@ function App() {
               disabled={isGeneratingUsers || isLoading || isCreatingCoupon}
             />
             <small>발급할 쿠폰의 고유 ID를 입력하세요</small>
+          </div>
+
+          <div className="coupon-info">
+            <div className="info-item">
+              <span className="label">발급 한도:</span>
+              <span className="value">{couponLimit}개</span>
+            </div>
+            <div className="info-item">
+              <span className="label">상태:</span>
+              <span className={`value ${couponId ? 'ready' : 'waiting'}`}>
+                {isCreatingCoupon ? '생성 중...' : couponId ? '준비 완료' : '설정 필요'}
+              </span>
+            </div>
+          </div>
+
+          <div className="button-group">
+            <button
+              onClick={createCoupon}
+              disabled={!couponId.trim() || isGeneratingUsers || isLoading || isCreatingCoupon}
+              className="generate-button"
+            >
+              {isCreatingCoupon ? (
+                <>
+                  <span className="spinner-small"></span>
+                  쿠폰 생성 중...
+                </>
+              ) : (
+                <>
+                  🎫 쿠폰 "{couponId}" 생성 (한도: {couponLimit}개)
+                </>
+              )}
+            </button>
           </div>
         </div>
 
@@ -505,47 +502,6 @@ function App() {
             )}
           </div>
         )}
-
-        {/* 쿠폰 생성 섹션 */}
-        <div className="coupon-section">
-          <h2>🎫 쿠폰 생성</h2>
-          
-          <div className="coupon-info">
-            <div className="info-item">
-              <span className="label">쿠폰 ID:</span>
-              <span className="value">{couponId || '입력 필요'}</span>
-            </div>
-            <div className="info-item">
-              <span className="label">발급 한도:</span>
-              <span className="value">{couponLimit}개</span>
-            </div>
-            <div className="info-item">
-              <span className="label">상태:</span>
-              <span className={`value ${couponId ? 'ready' : 'waiting'}`}>
-                {isCreatingCoupon ? '생성 중...' : couponId ? '준비 완료' : '설정 필요'}
-              </span>
-            </div>
-          </div>
-
-          <div className="button-group">
-            <button
-              onClick={createCoupon}
-              disabled={!couponId.trim() || isGeneratingUsers || isLoading || isCreatingCoupon}
-              className="generate-button"
-            >
-              {isCreatingCoupon ? (
-                <>
-                  <span className="spinner-small"></span>
-                  쿠폰 생성 중...
-                </>
-              ) : (
-                <>
-                  🎫 쿠폰 "{couponId}" 생성 (한도: {couponLimit}개)
-                </>
-              )}
-            </button>
-          </div>
-        </div>
 
         {/* 테스트 실행 */}
         <div className="test-section">
