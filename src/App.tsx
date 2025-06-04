@@ -36,6 +36,7 @@ function App() {
   const [isGeneratingUsers, setIsGeneratingUsers] = useState<boolean>(false)
   const [isCreatingCoupon, setIsCreatingCoupon] = useState<boolean>(false)
   const [testResult, setTestResult] = useState<TestResult | null>(null)
+  const [batchSize, setBatchSize] = useState<number>(1000)
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // 유저 상태 업데이트 함수
@@ -170,16 +171,15 @@ function App() {
       const startTime = Date.now()
 
       // 배치 크기 설정 (한 번에 처리할 요청 수)
-      const BATCH_SIZE = 1000
-      const totalBatches = Math.ceil(users.length / BATCH_SIZE)
+      const totalBatches = Math.ceil(users.length / batchSize)
       const responses: CouponRequest[] = []
       let successCount = 0
       let failedCount = 0
 
       // 배치 단위로 처리
       for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-        const start = batchIndex * BATCH_SIZE
-        const end = Math.min(start + BATCH_SIZE, users.length)
+        const start = batchIndex * batchSize
+        const end = Math.min(start + batchSize, users.length)
         const batchUsers = users.slice(start, end)
 
         // 현재 배치의 유저들 상태를 testing으로 업데이트
@@ -344,6 +344,19 @@ function App() {
               min="1"
               max="10000"
             />
+          </div>
+
+          <div className="input-group">
+            <label>배치 크기:</label>
+            <input
+              type="number"
+              value={batchSize}
+              onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))}
+              min="1"
+              max="10000"
+              disabled={isLoading}
+            />
+            <small>한 번에 처리할 동시 요청 수입니다. 서버와 브라우저 성능에 따라 조절하세요.</small>
           </div>
         </div>
 
