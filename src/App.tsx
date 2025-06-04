@@ -28,7 +28,7 @@ function App() {
   const [users, setUsers] = useState<User[]>([])
   const [userCount, setUserCount] = useState<number>(1000)
   const [couponLimit, setCouponLimit] = useState<number>(500)
-  const [apiUrl, setApiUrl] = useState<string>('http://localhost:3500')
+  const [apiUrl, setApiUrl] = useState<string>('https://doroks.tplinkdns.com/couponsystem/back')
   const [couponId, setCouponId] = useState<string>('WELCOME')
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isGeneratingUsers, setIsGeneratingUsers] = useState<boolean>(false)
