@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import { useState, useRef } from 'react'
 import axios from 'axios'
 import './App.css'
 
@@ -198,9 +198,9 @@ function App() {
       const startTime = Date.now()
 
       // 배치 크기를 더 작게 조정
-      const BATCH_SIZE = 10
-      const BATCH_DELAY = 200 // 배치 간 딜레이 (ms)
-      const REQUEST_DELAY = 100 // 요청 간 딜레이 (ms)
+      const BATCH_SIZE = 1000
+      const BATCH_DELAY = 100 // 배치 간 딜레이 (ms)
+      const REQUEST_DELAY = 50 // 요청 간 딜레이 (ms)
       const totalBatches = Math.ceil(users.length / BATCH_SIZE)
       const responses: CouponRequest[] = []
       let successCount = 0
