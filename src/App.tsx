@@ -101,23 +101,6 @@ function App() {
     setTestResult(null)
   }
 
-  // 재시도 로직을 포함한 쿠폰 요청 함수
-  const requestCouponWithRetry = async (user: User, retryCount = 0): Promise<CouponRequest> => {
-    const MAX_RETRIES = 2
-    const RETRY_DELAY = 1000 // 1초
-
-    try {
-      return await requestCoupon(user)
-    } catch (error: any) {
-      if (retryCount < MAX_RETRIES) {
-        console.log(`🔄 유저 ${user.name}의 요청 재시도 중... (${retryCount + 1}/${MAX_RETRIES})`)
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
-        return requestCouponWithRetry(user, retryCount + 1)
-      }
-      throw error
-    }
-  }
-
   // 단일 쿠폰 요청
   const requestCoupon = async (user: User): Promise<CouponRequest> => {
     console.log(`️ 쿠폰 요청 시작 - 유저: ${user.name} (${user.id})`);
@@ -198,9 +181,8 @@ function App() {
       const startTime = Date.now()
 
       // 배치 크기를 더 작게 조정
-      const BATCH_SIZE = 1000
+      const BATCH_SIZE = 20
       const BATCH_DELAY = 100 // 배치 간 딜레이 (ms)
-      const REQUEST_DELAY = 50 // 요청 간 딜레이 (ms)
       const totalBatches = Math.ceil(users.length / BATCH_SIZE)
       const responses: CouponRequest[] = []
       let successCount = 0
@@ -221,15 +203,25 @@ function App() {
           )
         )
 
-        // 현재 배치의 요청들을 순차적으로 처리
+        // 현재 배치의 요청들을 병렬로 처리하되, 각 요청에 약간의 딜레이 추가
+        const batchPromises = batchUsers.map((user, index) => 
+          new Promise<CouponRequest>(resolve => 
+            setTimeout(() => resolve(requestCoupon(user)), index * 50)
+          )
+        )
+        
+        const batchResults = await Promise.allSettled(batchPromises)
+
+        // 배치 결과 처리
         const batchResponses: CouponRequest[] = []
         let batchSuccessCount = 0
         let batchFailedCount = 0
 
-        for (let i = 0; i < batchUsers.length; i++) {
-          const user = batchUsers[i]
-          try {
-            const response = await requestCoupon(user)
+        batchResults.forEach((result, index) => {
+          const user = batchUsers[index]
+          
+          if (result.status === 'fulfilled') {
+            const response = result.value
             batchResponses.push(response)
             
             if (response.status === 'success') {
@@ -244,14 +236,13 @@ function App() {
                 u.id === user.id ? { ...u, status: response.status === 'success' ? 'success' : 'failed' } : u
               )
             )
-          } catch (error: any) {
-            const failedResponse: CouponRequest = {
+          } else {
+            batchResponses.push({
               userId: user.id,
               timestamp: Date.now(),
               status: 'failed',
-              error: error.message || '요청 실패'
-            }
-            batchResponses.push(failedResponse)
+              error: result.reason?.message || '요청 실패'
+            })
             batchFailedCount++
 
             // 실패 상태 업데이트
@@ -261,12 +252,7 @@ function App() {
               )
             )
           }
-
-          // 요청 간 딜레이
-          if (i < batchUsers.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY))
-          }
-        }
+        })
 
         // 배치 결과를 메인 결과에 추가
         responses.push(...batchResponses)
