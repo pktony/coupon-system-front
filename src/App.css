@@ -21,7 +21,7 @@ body {
 }
 
 .container {
-  max-width: 1200px;
+  width: 1200px;
   margin: 0 auto;
   background: white;
   border-radius: 20px;
@@ -976,4 +976,12 @@ button:not(.test-button):not(.cancel-button):not(.generate-button):not(.clear-bu
   color: #0c5460;
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 1200px) {
+  .container {
+    width: 100%;
+    max-width: 1200px;
+  }
 }
