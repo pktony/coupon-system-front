@@ -613,18 +613,23 @@ function App() {
                   </span>
                 </div>
                 <div className="users-dots-grid">
-                  {users.map((user, index) => (
-                    <div
-                      key={user.id}
-                      className={`user-dot ${user.status || 'ready'}`}
-                      title={`#${index + 1}: ${user.name} (${user.id.substring(0, 8)}...) - ${
-                        user.status === 'ready' ? '준비 완료' :
-                        user.status === 'testing' ? '테스트 중' :
-                        user.status === 'success' ? '성공' :
-                        user.status === 'failed' ? '실패' : '준비 완료'
-                      }`}
-                    ></div>
-                  ))}
+                  {users.map((user, index) => {
+                    const response = testResult?.responses.find(r => r.userId === user.id)
+                    const errorMessage = response?.status === 'failed' ? `\n실패 이유: ${response.error}` : ''
+                    
+                    return (
+                      <div
+                        key={user.id}
+                        className={`user-dot ${user.status || 'ready'}`}
+                        title={`#${index + 1}: ${user.name} (${user.id.substring(0, 8)}...) - ${
+                          user.status === 'ready' ? '준비 완료' :
+                          user.status === 'testing' ? '테스트 중' :
+                          user.status === 'success' ? '성공' :
+                          user.status === 'failed' ? '실패' : '준비 완료'
+                        }${errorMessage}`}
+                      ></div>
+                    )
+                  })}
                 </div>
                 <div className="dots-info">
                   <p>각 점은 한 명의 유저를 나타냅니다. 마우스를 올리면 상세 정보를 볼 수 있습니다.</p>
