@@ -180,8 +180,9 @@ function App() {
       console.log('🚀 동시 쿠폰 발급 테스트 시작...');
       const startTime = Date.now()
 
-      // 배치 크기 설정 (한 번에 처리할 요청 수)
-      const BATCH_SIZE = 100
+      // 배치 크기를 더 작게 조정
+      const BATCH_SIZE = 20
+      const BATCH_DELAY = 100 // 배치 간 딜레이 (ms)
       const totalBatches = Math.ceil(users.length / BATCH_SIZE)
       const responses: CouponRequest[] = []
       let successCount = 0
@@ -202,22 +203,31 @@ function App() {
           )
         )
 
-        // 현재 배치의 요청들을 병렬로 처리
-        const batchPromises = batchUsers.map(user => requestCoupon(user))
+        // 현재 배치의 요청들을 병렬로 처리하되, 각 요청에 약간의 딜레이 추가
+        const batchPromises = batchUsers.map((user, index) => 
+          new Promise<CouponRequest>(resolve => 
+            setTimeout(() => resolve(requestCoupon(user)), index * 50)
+          )
+        )
+        
         const batchResults = await Promise.allSettled(batchPromises)
 
         // 배치 결과 처리
+        const batchResponses: CouponRequest[] = []
+        let batchSuccessCount = 0
+        let batchFailedCount = 0
+
         batchResults.forEach((result, index) => {
           const user = batchUsers[index]
           
           if (result.status === 'fulfilled') {
             const response = result.value
-            responses.push(response)
+            batchResponses.push(response)
             
             if (response.status === 'success') {
-              successCount++
+              batchSuccessCount++
             } else {
-              failedCount++
+              batchFailedCount++
             }
 
             // 성공/실패 상태 업데이트
@@ -227,13 +237,13 @@ function App() {
               )
             )
           } else {
-            responses.push({
+            batchResponses.push({
               userId: user.id,
               timestamp: Date.now(),
               status: 'failed',
               error: result.reason?.message || '요청 실패'
             })
-            failedCount++
+            batchFailedCount++
 
             // 실패 상태 업데이트
             setUsers(prevUsers => 
@@ -244,8 +254,18 @@ function App() {
           }
         })
 
+        // 배치 결과를 메인 결과에 추가
+        responses.push(...batchResponses)
+        successCount += batchSuccessCount
+        failedCount += batchFailedCount
+
         // 진행 상황 로깅
         console.log(`📊 [DEBUG] 배치 ${batchIndex + 1}/${totalBatches} 완료 - 성공: ${successCount}, 실패: ${failedCount}`)
+
+        // 다음 배치 전에 딜레이 추가
+        if (batchIndex < totalBatches - 1) {
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY))
+        }
       }
 
       const endTime = Date.now()
