@@ -417,7 +417,7 @@ button:not(.test-button):not(.cancel-button):not(.generate-button):not(.clear-bu
 /* 결과 요약 */
 .summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
   gap: 20px;
   margin-bottom: 30px;
 }
@@ -482,7 +482,7 @@ button:not(.test-button):not(.cancel-button):not(.generate-button):not(.clear-bu
 
 .results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   max-height: 500px;
   overflow-y: auto;
@@ -491,6 +491,7 @@ button:not(.test-button):not(.cancel-button):not(.generate-button):not(.clear-bu
   border: 2px solid #e9ecef;
   border-radius: 12px;
   background: #f8f9fa;
+  width: 100%;
   
   /* 커스텀 스크롤바 */
   scrollbar-width: thin;
@@ -602,66 +603,38 @@ button:not(.test-button):not(.cancel-button):not(.generate-button):not(.clear-bu
 }
 
 /* 반응형 디자인 */
-@media (max-width: 768px) {
-  .App {
-    padding: 10px;
-  }
-  
+@media (max-width: 1200px) {
   .container {
-    border-radius: 10px;
+    width: 100%;
+    max-width: 1200px;
   }
   
-  h1 {
-    font-size: 2rem;
-    padding: 20px;
+  .summary {
+    grid-template-columns: repeat(3, 1fr);
   }
   
-  .config-section,
-  .user-generation-section,
-  .users-section,
-  .test-section,
-  .results-section {
-    padding: 20px;
+  .results-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .summary {
+    grid-template-columns: repeat(2, 1fr);
   }
   
-  .input-group input {
-    max-width: 100%;
+  .results-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
-  
-  .user-generation-info {
-    grid-template-columns: 1fr;
-  }
-  
-  .users-stats {
-    grid-template-columns: 1fr;
-  }
-  
+}
+
+@media (max-width: 480px) {
   .summary {
     grid-template-columns: 1fr;
   }
   
-  .users-grid,
   .results-grid {
     grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 10px;
-  }
-  
-  .result-item {
-    padding: 8px;
-    font-size: 0.8rem;
-  }
-  
-  .result-item .user-info strong {
-    font-size: 0.85rem;
-  }
-  
-  .button-group {
-    flex-direction: column;
-  }
-  
-  button {
-    width: 100%;
   }
 }
 
