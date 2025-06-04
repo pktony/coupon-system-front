@@ -181,7 +181,7 @@ function App() {
       const startTime = Date.now()
 
       // 배치 크기 설정 (한 번에 처리할 요청 수)
-      const BATCH_SIZE = 100
+      const BATCH_SIZE = 500
       const totalBatches = Math.ceil(users.length / BATCH_SIZE)
       const responses: CouponRequest[] = []
       let successCount = 0
