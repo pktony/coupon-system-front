@@ -177,49 +177,78 @@ function App() {
     setTestResult(null)
 
     try {
-
       console.log('🚀 동시 쿠폰 발급 테스트 시작...');
       const startTime = Date.now()
 
-      // 모든 유저에 대해 동시에 쿠폰 요청
-      const promises = users.map(user => 
-        requestCoupon(user)
-      )
-
-      console.log(`📊 [DEBUG] ${promises.length}개의 Promise 생성 완료`);
-      
-      const results = await Promise.allSettled(promises)
-      const endTime = Date.now()
-      
-      console.log(`📊 [DEBUG] Promise.allSettled 완료 - 소요시간: ${endTime - startTime}ms`);
-
+      // 배치 크기 설정 (한 번에 처리할 요청 수)
+      const BATCH_SIZE = 100
+      const totalBatches = Math.ceil(users.length / BATCH_SIZE)
       const responses: CouponRequest[] = []
       let successCount = 0
       let failedCount = 0
 
-      results.forEach((result, index) => {
-        console.log(`📊 [DEBUG] 결과 ${index + 1}:`, result);
-        
-        if (result.status === 'fulfilled') {
-          responses.push(result.value)
-          if (result.value.status === 'success') {
-            successCount++
-          } else {
-            failedCount++
-          }
-        } else {
-          // Promise가 reject된 경우 (취소 등)
-          responses.push({
-            userId: users[index].id,
-            timestamp: Date.now(),
-            status: 'failed',
-            error: result.reason?.message || '요청 실패'
-          })
-          failedCount++
-        }
-      })
+      // 배치 단위로 처리
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        const start = batchIndex * BATCH_SIZE
+        const end = Math.min(start + BATCH_SIZE, users.length)
+        const batchUsers = users.slice(start, end)
 
-      console.log(`📊 [DEBUG] 최종 결과: 성공 ${successCount}, 실패 ${failedCount}`);
+        // 현재 배치의 유저들 상태를 testing으로 업데이트
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            batchUsers.some(batchUser => batchUser.id === user.id)
+              ? { ...user, status: 'testing' }
+              : user
+          )
+        )
+
+        // 현재 배치의 요청들을 병렬로 처리
+        const batchPromises = batchUsers.map(user => requestCoupon(user))
+        const batchResults = await Promise.allSettled(batchPromises)
+
+        // 배치 결과 처리
+        batchResults.forEach((result, index) => {
+          const user = batchUsers[index]
+          
+          if (result.status === 'fulfilled') {
+            const response = result.value
+            responses.push(response)
+            
+            if (response.status === 'success') {
+              successCount++
+            } else {
+              failedCount++
+            }
+
+            // 성공/실패 상태 업데이트
+            setUsers(prevUsers => 
+              prevUsers.map(u => 
+                u.id === user.id ? { ...u, status: response.status === 'success' ? 'success' : 'failed' } : u
+              )
+            )
+          } else {
+            responses.push({
+              userId: user.id,
+              timestamp: Date.now(),
+              status: 'failed',
+              error: result.reason?.message || '요청 실패'
+            })
+            failedCount++
+
+            // 실패 상태 업데이트
+            setUsers(prevUsers => 
+              prevUsers.map(u => 
+                u.id === user.id ? { ...u, status: 'failed' } : u
+              )
+            )
+          }
+        })
+
+        // 진행 상황 로깅
+        console.log(`📊 [DEBUG] 배치 ${batchIndex + 1}/${totalBatches} 완료 - 성공: ${successCount}, 실패: ${failedCount}`)
+      }
+
+      const endTime = Date.now()
 
       setTestResult({
         totalRequests: users.length,
